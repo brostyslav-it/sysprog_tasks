@@ -1,0 +1,6 @@
+Package: files-counter
+Version: 1.0-1
+Architecture: all
+Maintainer: RostyslavDev <bykhalrostyslav@gmail.com>
+Description: A script to count the number of files in /etc (excluding directories and links).
+Depends: bash
