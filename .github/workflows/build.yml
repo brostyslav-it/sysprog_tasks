@@ -1,0 +1,64 @@
+name: Action to build .rpm and .deb
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout actions repository
+        uses: actions/checkout@v2
+
+      - name: Setup environment to build packages
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential rpm devscripts dpkg
+
+      - name: Prepare directories for .rpm building
+        run: |
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          cp files_counter.sh ~/rpmbuild/SOURCES/
+          cp rpm/spec/files_counter.spec ~/rpmbuild/SPECS/
+
+      - name: Build .rpm
+        run: |
+          rpmbuild -ba ~/rpmbuild/SPECS/files_counter.spec
+
+      - name: Build .deb
+        run: |
+          set -e
+          echo "Building .deb package"
+          mkdir -p ~/deb-package/usr/local/bin
+          cp files_counter.sh ~/deb-package/usr/local/bin/
+          mkdir -p ~/deb-package/DEBIAN
+          echo "Package: files-counter
+          Version: 1.0-1
+          Architecture: amd64
+          Maintainer: brostyslav
+          Description: This script can count files excluding directories and links in /etc" > ~/deb-package/DEBIAN/control
+          echo "~/deb-package before dpkg-deb:"
+          ls -lR ~/deb-package
+          dpkg-deb --build ~/deb-package
+          echo "~/deb-package after dpkg-deb:"
+          ls -lR ~/deb-package
+
+      - name: Check files existing
+        run: |
+          echo "Checking for .deb:"
+          ls /home/runner/*.deb || echo "No .deb found"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages
+          path: |
+            ~/rpmbuild/RPMS/
+            ~/rpmbuild/SRPMS/
+            /home/runner/*.deb
