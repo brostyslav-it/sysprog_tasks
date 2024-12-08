@@ -1,29 +1,42 @@
 pipeline {
-  agent any
-  stages {
-    stage('Test') {
-      agent {
+    agent {
         docker {
-          image 'ubuntu:18.04'
+            image 'jenkins-img'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
-
-      }
-      steps {
-        sh 'echo "Getting Sources"'
-      }
     }
-
-    stage('Build') {
-      agent {
-        docker {
-          image 'ubuntu:18.04'
+    stages {
+        stage('Fetch Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/brostyslav-it/sysprog_tasks.git'
+            }
         }
-
-      }
-      steps {
-        sh 'echo "Build from sources"'
-      }
+        stage('Retrieve DEB Package') {
+            steps {
+                sh '''
+                    curl -L https://github.com/brostyslav-it/sysprog_tasks/blob/main/deb/build/deb-package.deb -o /var/tmp/deb-package.deb
+                '''
+            }
+        }
+        stage('Apply DEB Package') {
+            steps {
+                sh '''
+                    sudo dpkg -i /var/tmp/deb-package.deb
+                '''
+            }
+        }
+        stage('Fetch Script') {
+            steps {
+                sh '''
+                    curl -L https://github.com/brostyslav-it/sysprog_tasks/blob/main/files_counter.sh -o /var/tmp/files_counter.sh
+                    chmod +x /var/tmp/files_counter.sh
+                '''
+            }
+        }
+        stage('Execute Script') {
+            steps {
+                sh '/var/tmp/files_counter.sh'
+            }
+        }
     }
-
-  }
 }
